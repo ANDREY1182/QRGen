@@ -3,441 +3,411 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Генератор QR-кода по IP</title>
-    <!-- Подключаем библиотеку qrcode.js для генерации QR-кодов -->
+    <title>QR Generator для ESP32</title>
+    <!-- Используем чистую библиотеку для генерации QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         }
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
             min-height: 100vh;
-            margin: 0;
-            background: linear-gradient(145deg, #f6f9fc 0%, #e6f0f5 100%);
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
         }
-        .card {
-            background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            border-radius: 48px;
-            padding: 40px 35px;
-            max-width: 550px;
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
             width: 100%;
-            box-shadow: 0 20px 40px rgba(0, 20, 30, 0.2), 0 6px 12px rgba(0,0,0,0.05);
-            border: 1px solid rgba(255,255,255,0.5);
-            transition: 0.2s;
-            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
         h1 {
-            font-size: 2rem;
-            font-weight: 600;
-            margin-top: 0;
-            margin-bottom: 0.3rem;
-            color: #0b2b3b;
-            letter-spacing: -0.5px;
+            color: #1a202c;
+            font-size: 24px;
+            margin-bottom: 8px;
+            text-align: center;
         }
         .subtitle {
-            color: #2c5a6e;
-            font-weight: 400;
-            font-size: 1rem;
-            margin-bottom: 1.8rem;
-            border-bottom: 2px dashed rgba(44, 90, 110, 0.15);
-            padding-bottom: 0.8rem;
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
         }
         .ip-display {
-            background: #ffffffcc;
-            backdrop-filter: blur(4px);
-            padding: 14px 18px;
-            border-radius: 60px;
-            display: inline-block;
-            font-size: 1.2rem;
-            font-weight: 500;
-            color: #003153;
-            box-shadow: inset 0 1px 4px rgba(0,0,0,0.02), 0 4px 8px rgba(0,20,30,0.08);
-            border: 1px solid rgba(255,255,255,0.7);
-            margin-bottom: 30px;
+            background: #edf2f7;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 25px;
             word-break: break-all;
         }
         .qr-wrapper {
-            background: white;
-            padding: 25px;
-            border-radius: 32px;
-            display: inline-block;
-            box-shadow: 0 12px 24px rgba(0, 20, 30, 0.15);
-            margin: 6px 0 20px 0;
-            border: 1px solid rgba(255,255,255,0.6);
-        }
-        #qrcode {
             display: flex;
             justify-content: center;
-            align-items: center;
-            width: 200px;
-            height: 200px;
-            margin: 0 auto;
+            margin: 20px 0 25px;
         }
-        #qrcode img, #qrcode canvas {
+        #qrcode {
+            display: inline-block;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        #qrcode canvas {
             display: block !important;
             width: 200px !important;
             height: 200px !important;
-            border-radius: 12px;
         }
-        .info-text {
-            color: #1f4b5e;
-            font-weight: 400;
-            margin: 16px 0 20px 0;
-            background: #ffffffb0;
-            backdrop-filter: blur(2px);
-            padding: 8px 16px;
-            border-radius: 40px;
-            display: inline-block;
-            border: 1px solid rgba(255,255,255,0.4);
+        .info {
+            text-align: center;
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 20px;
         }
-        .download-btn {
-            display: inline-block;
-            background: #0b2b3b;
-            color: white;
-            text-decoration: none;
-            padding: 16px 40px;
-            border-radius: 60px;
-            font-weight: 500;
-            font-size: 1.1rem;
-            letter-spacing: 0.3px;
-            transition: all 0.2s ease;
-            border: none;
-            box-shadow: 0 8px 18px rgba(11, 43, 59, 0.25);
-            border: 1px solid rgba(255,255,255,0.2);
-            margin: 12px 0 4px;
-            cursor: pointer;
-        }
-        .download-btn:hover {
-            background: #1a445a;
-            transform: scale(1.02);
-            box-shadow: 0 12px 28px rgba(11, 43, 59, 0.35);
-        }
-        .download-btn:active {
-            transform: scale(0.97);
-        }
-        .fallback-note {
-            margin-top: 24px;
-            font-size: 0.85rem;
-            color: #3d6c81;
-            background: #e3eff6;
-            padding: 10px 20px;
-            border-radius: 60px;
-            display: inline-block;
-            border: 1px solid rgba(255,255,255,0.5);
-        }
-        .fallback-note a {
-            color: #003153;
-            font-weight: 500;
-            text-decoration: none;
-            border-bottom: 1px dotted #003153;
-        }
-        .error-message {
-            background: #ffebee;
-            color: #a1313f;
-            padding: 14px 18px;
-            border-radius: 60px;
-            border-left: 6px solid #c62828;
-            font-weight: 500;
-            margin: 18px 0;
-        }
-        .ip-input-form {
-            margin: 20px 0 10px;
+        .btn-group {
             display: flex;
             flex-direction: column;
             gap: 12px;
+            margin-top: 10px;
         }
-        .ip-input-form input {
-            padding: 14px 20px;
-            border-radius: 60px;
-            border: 1px solid #b8d0db;
-            font-size: 1rem;
-            background: white;
+        .btn {
+            display: inline-block;
+            padding: 14px 24px;
+            background: #2b6cb0;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .btn:hover {
+            background: #2c5282;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.3);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn-secondary {
+            background: #48bb78;
+        }
+        .btn-secondary:hover {
+            background: #38a169;
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+        .btn-outline {
+            background: transparent;
+            color: #2d3748;
+            border: 2px solid #e2e8f0;
+        }
+        .btn-outline:hover {
+            background: #f7fafc;
+            box-shadow: none;
+            transform: none;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0 10px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
             outline: none;
             transition: 0.2s;
-            text-align: center;
         }
-        .ip-input-form input:focus {
-            border-color: #0b2b3b;
-            box-shadow: 0 0 0 3px rgba(11, 43, 59, 0.15);
+        .input-group input:focus {
+            border-color: #2b6cb0;
+            box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.1);
         }
-        .ip-input-form button {
-            background: #1a5a77;
+        .input-group button {
+            padding: 12px 24px;
+            background: #2b6cb0;
             color: white;
             border: none;
-            padding: 14px;
-            border-radius: 60px;
-            font-weight: 500;
-            font-size: 1rem;
+            border-radius: 10px;
+            font-weight: 600;
             cursor: pointer;
             transition: 0.2s;
-            border: 1px solid rgba(255,255,255,0.15);
+            white-space: nowrap;
         }
-        .ip-input-form button:hover {
-            background: #0b2b3b;
+        .input-group button:hover {
+            background: #2c5282;
         }
-        .flex-center {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .error {
+            background: #fed7d7;
+            color: #9b2c2c;
+            padding: 10px 16px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+            font-size: 14px;
         }
         .badge {
-            background: #d7e6ef;
-            color: #0b2b3b;
+            display: inline-block;
+            background: #ebf8ff;
+            color: #2b6cb0;
             padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-bottom: 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 15px;
         }
         @media (max-width: 480px) {
-            .card { padding: 30px 18px; }
-            #qrcode { width: 160px; height: 160px; }
-            #qrcode img, #qrcode canvas { width: 160px !important; height: 160px !important; }
+            .container { padding: 24px 20px; }
+            #qrcode canvas { width: 160px !important; height: 160px !important; }
+            .input-group { flex-direction: column; }
+            .input-group button { width: 100%; }
         }
     </style>
 </head>
 <body>
-<div class="card" id="app">
-    <h1>📱 QR по IP</h1>
-    <div class="subtitle">введите IP или передайте через ?ip=</div>
+<div class="container">
+    <h1>📱 QR Generator</h1>
+    <p class="subtitle">для ESP32 дисплея 128×64</p>
 
-    <!-- Блок для отображения IP и QR -->
-    <div id="mainContent">
-        <div class="ip-display" id="ipDisplay">—</div>
-        <div class="qr-wrapper">
-            <div id="qrcode"></div>
-        </div>
-        <div class="info-text" id="qrInfo">QR-код для IP-адреса</div>
-        <a href="#" id="downloadLink" class="download-btn">⬇ Скачать QR-код</a>
-        <div class="fallback-note" style="margin-top: 12px;">
-            ⚡ <a href="#" id="downloadFallback">Скачать (PNG)</a>
-        </div>
+    <div id="errorBox" class="error"></div>
+
+    <div class="ip-display" id="ipDisplay">—</div>
+
+    <div class="qr-wrapper">
+        <div id="qrcode"></div>
     </div>
 
-    <!-- Форма ручного ввода (резерв) -->
-    <div class="ip-input-form">
-        <input type="text" id="ipInput" placeholder="например: 192.168.1.1 или 8.8.8.8" value="">
-        <button id="generateBtn">Сгенерировать QR</button>
+    <div class="info" id="qrInfo">Введите IP-адрес или передайте через ?ip=</div>
+
+    <div class="btn-group">
+        <a href="#" id="downloadBtn" class="btn" style="opacity:0.5;pointer-events:none;">
+            ⬇ Скачать QR (PNG)
+        </a>
+        <a href="#" id="downloadBinaryBtn" class="btn btn-secondary" style="opacity:0.5;pointer-events:none;">
+            ⬇ Скачать как бинарный (RAW)
+        </a>
     </div>
 
-    <div id="errorBox" class="error-message" style="display: none;"></div>
-    <div class="badge">⚡ GET-параметр: ?ip=</div>
+    <div class="input-group">
+        <input type="text" id="ipInput" placeholder="Введите IP, например 192.168.1.100">
+        <button id="generateBtn">Сгенерировать</button>
+    </div>
+
+    <div style="text-align:center;">
+        <span class="badge">⚡ GET-параметр: ?ip=192.168.1.100</span>
+    </div>
 </div>
 
 <script>
     (function() {
-        // Элементы
+        // DOM элементы
         const qrContainer = document.getElementById('qrcode');
         const ipDisplay = document.getElementById('ipDisplay');
         const qrInfo = document.getElementById('qrInfo');
-        const downloadLink = document.getElementById('downloadLink');
-        const downloadFallback = document.getElementById('downloadFallback');
         const errorBox = document.getElementById('errorBox');
         const ipInput = document.getElementById('ipInput');
         const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadBinaryBtn = document.getElementById('downloadBinaryBtn');
 
-        // Переменная для хранения текущего IP и объекта QR
         let currentIP = '';
-        let qrCodeInstance = null;
-        let currentCanvas = null; // для скачивания
+        let currentCanvas = null;
 
-        // Функция очистки QR-контейнера
+        // Показать ошибку
+        function showError(msg) {
+            errorBox.textContent = '⚠️ ' + msg;
+            errorBox.style.display = 'block';
+            setTimeout(() => { errorBox.style.display = 'none'; }, 5000);
+        }
+
+        // Очистка QR
         function clearQR() {
             qrContainer.innerHTML = '';
-            qrCodeInstance = null;
             currentCanvas = null;
-            // деактивируем ссылки скачивания
-            downloadLink.href = '#';
-            downloadLink.style.opacity = '0.5';
-            downloadLink.style.pointerEvents = 'none';
-            downloadFallback.href = '#';
-            downloadFallback.style.opacity = '0.5';
-            downloadFallback.style.pointerEvents = 'none';
+            downloadBtn.style.opacity = '0.5';
+            downloadBtn.style.pointerEvents = 'none';
+            downloadBtn.href = '#';
+            downloadBinaryBtn.style.opacity = '0.5';
+            downloadBinaryBtn.style.pointerEvents = 'none';
+            downloadBinaryBtn.href = '#';
         }
 
-        // Функция показа ошибки
-        function showError(message) {
-            errorBox.textContent = '❌ ' + message;
-            errorBox.style.display = 'block';
-            setTimeout(() => {
-                errorBox.style.display = 'none';
-            }, 5000);
-        }
-
-        // Функция обновления ссылок для скачивания
-        function updateDownloadLinks(canvasElement) {
-            if (!canvasElement) {
-                downloadLink.href = '#';
-                downloadLink.style.opacity = '0.5';
-                downloadLink.style.pointerEvents = 'none';
-                downloadFallback.href = '#';
-                downloadFallback.style.opacity = '0.5';
-                downloadFallback.style.pointerEvents = 'none';
-                return;
-            }
-
-            try {
-                // Получаем данные PNG как data URL
-                const pngDataUrl = canvasElement.toDataURL('image/png');
-                // Устанавливаем для основной ссылки (download)
-                downloadLink.href = pngDataUrl;
-                downloadLink.download = `qr_ip_${currentIP || 'address'}.png`;
-                downloadLink.style.opacity = '1';
-                downloadLink.style.pointerEvents = 'auto';
-
-                // Для fallback-ссылки тоже
-                downloadFallback.href = pngDataUrl;
-                downloadFallback.download = `qr_ip_${currentIP || 'address'}.png`;
-                downloadFallback.style.opacity = '1';
-                downloadFallback.style.pointerEvents = 'auto';
-            } catch (e) {
-                console.warn('Не удалось создать ссылку для скачивания:', e);
-                // Если не сработало — скрываем или делаем неактивными
-                downloadLink.href = '#';
-                downloadLink.style.opacity = '0.5';
-                downloadLink.style.pointerEvents = 'none';
-                downloadFallback.href = '#';
-                downloadFallback.style.opacity = '0.5';
-                downloadFallback.style.pointerEvents = 'none';
-            }
-        }
-
-        // Основная функция генерации QR-кода по IP
+        // Генерация монохромного QR (белый фон, черный QR)
         function generateQR(ip) {
-            // Очищаем предыдущий QR
             clearQR();
 
-            // Валидация: IP должен быть непустой строкой
             if (!ip || ip.trim() === '') {
-                showError('IP-адрес не указан.');
+                showError('IP-адрес не указан');
                 ipDisplay.textContent = '—';
-                qrInfo.textContent = '⏳ введите IP';
+                qrInfo.textContent = '❌ Введите IP';
                 return;
             }
 
-            // Простейшая проверка формата (можно улучшить)
-            const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
-            // Дополнительно разрешаем localhost, домены, но для QR подойдёт любая строка
-            // Ограничим только чтобы не было совсем странных символов (но пусть генерирует)
             const sanitized = ip.trim();
-
-            // Отображаем IP
             currentIP = sanitized;
             ipDisplay.textContent = sanitized;
             qrInfo.textContent = `QR-код для ${sanitized}`;
 
             try {
-                // Создаём новый QR-код внутри контейнера
-                // Используем размер 200x200 (подогнано под стили)
-                qrCodeInstance = new QRCode(qrContainer, {
+                // Генерируем QR с монохромными цветами
+                // Используем black/white для дисплея 128x64
+                const qr = new QRCode(qrContainer, {
                     text: sanitized,
                     width: 200,
                     height: 200,
-                    colorDark: '#0b2b3b',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.H // высокий уровень коррекции
+                    colorDark: '#000000',    // черный
+                    colorLight: '#ffffff',   // белый
+                    correctLevel: QRCode.CorrectLevel.H
                 });
 
-                // После создания, находим canvas внутри контейнера
-                // Небольшая задержка для рендера
+                // Находим canvas после рендера
                 setTimeout(() => {
                     const canvas = qrContainer.querySelector('canvas');
                     if (canvas) {
                         currentCanvas = canvas;
-                        updateDownloadLinks(canvas);
-                    } else {
-                        // Если canvas не найден, возможно используется img (в некоторых версиях)
-                        // Попробуем найти img
-                        const img = qrContainer.querySelector('img');
-                        if (img) {
-                            // Если используется img – создадим canvas из него для скачивания
-                            const tempCanvas = document.createElement('canvas');
-                            tempCanvas.width = 200;
-                            tempCanvas.height = 200;
-                            const ctx = tempCanvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, 200, 200);
-                            currentCanvas = tempCanvas;
-                            updateDownloadLinks(tempCanvas);
-                        } else {
-                            // Не удалось найти canvas или img
-                            console.warn('Не найден canvas или img в QR-контейнере');
-                            updateDownloadLinks(null);
-                        }
-                    }
-                }, 100);
+                        // Активируем кнопки скачивания
+                        downloadBtn.style.opacity = '1';
+                        downloadBtn.style.pointerEvents = 'auto';
+                        downloadBinaryBtn.style.opacity = '1';
+                        downloadBinaryBtn.style.pointerEvents = 'auto';
 
-            } catch (error) {
-                console.error('Ошибка генерации QR:', error);
-                showError('Не удалось сгенерировать QR-код. Проверьте IP.');
-                ipDisplay.textContent = '⚠️ ошибка';
-                qrInfo.textContent = '❌ ошибка генерации';
+                        // Ссылка на PNG
+                        const pngData = canvas.toDataURL('image/png');
+                        downloadBtn.href = pngData;
+                        downloadBtn.download = `qr_${sanitized}.png`;
+
+                        // Генерация бинарного RAW для ESP32 (монохромный 128x64)
+                        generateBinaryQR(canvas);
+                    } else {
+                        showError('Не удалось создать QR-код');
+                    }
+                }, 150);
+
+            } catch (e) {
+                console.error(e);
+                showError('Ошибка генерации QR');
                 clearQR();
             }
         }
 
-        // Функция обработки IP из URL (GET-параметр)
+        // Функция для генерации бинарного RAW (монохромный 128x64)
+        function generateBinaryQR(canvas) {
+            try {
+                // Создаем временный canvas 128x64 для бинарного представления
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                const width = 128;
+                const height = 64;
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+
+                // Рисуем QR на временном canvas с масштабированием
+                tempCtx.drawImage(canvas, 0, 0, width, height);
+
+                // Получаем данные пикселей
+                const imageData = tempCtx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+
+                // Создаем бинарный массив (1 бит на пиксель)
+                // Для ESP32 дисплея: 1 = черный (включен), 0 = белый (выключен)
+                const binaryData = [];
+                for (let i = 0; i < data.length; i += 4) {
+                    // Берем красный канал (все каналы одинаковы для черно-белого)
+                    const pixel = data[i] < 128 ? 1 : 0; // черный = 1, белый = 0
+                    binaryData.push(pixel);
+                }
+
+                // Упаковываем биты в байты (MSB first)
+                const byteArray = [];
+                for (let i = 0; i < binaryData.length; i += 8) {
+                    let byte = 0;
+                    for (let j = 0; j < 8; j++) {
+                        if (i + j < binaryData.length) {
+                            byte = (byte << 1) | binaryData[i + j];
+                        }
+                    }
+                    byteArray.push(byte);
+                }
+
+                // Создаем Blob с бинарными данными
+                const blob = new Blob([new Uint8Array(byteArray)], {
+                    type: 'application/octet-stream'
+                });
+
+                // Создаем ссылку для скачивания
+                const url = URL.createObjectURL(blob);
+                downloadBinaryBtn.href = url;
+                downloadBinaryBtn.download = `qr_${currentIP}_128x64.raw`;
+
+            } catch (e) {
+                console.warn('Ошибка создания бинарного файла:', e);
+                downloadBinaryBtn.style.opacity = '0.5';
+                downloadBinaryBtn.style.pointerEvents = 'none';
+            }
+        }
+
+        // Получить IP из URL
         function getIPFromURL() {
             const params = new URLSearchParams(window.location.search);
-            const ipParam = params.get('ip');
-            if (ipParam && ipParam.trim() !== '') {
-                ipInput.value = ipParam.trim();
-                generateQR(ipParam.trim());
+            const ip = params.get('ip');
+            if (ip && ip.trim() !== '') {
+                ipInput.value = ip.trim();
+                generateQR(ip.trim());
                 return true;
             }
             return false;
         }
 
         // Обработчик кнопки "Сгенерировать"
-        function handleGenerateClick() {
-            const inputIP = ipInput.value.trim();
-            if (inputIP === '') {
+        function handleGenerate() {
+            const ip = ipInput.value.trim();
+            if (!ip) {
                 showError('Введите IP-адрес');
                 return;
             }
-            generateQR(inputIP);
-            // Обновляем URL с параметром ?ip= (без перезагрузки)
+            generateQR(ip);
+            // Обновляем URL
             try {
-                const newUrl = new URL(window.location);
-                newUrl.searchParams.set('ip', inputIP);
-                window.history.replaceState({}, '', newUrl);
+                const url = new URL(window.location);
+                url.searchParams.set('ip', ip);
+                window.history.replaceState({}, '', url);
             } catch (e) {}
         }
 
-        // При загрузке страницы: проверяем GET-параметр
+        // Инициализация
         window.addEventListener('DOMContentLoaded', function() {
             const hasIP = getIPFromURL();
             if (!hasIP) {
-                // Если IP не передан — показываем подсказку
                 ipDisplay.textContent = '—';
-                qrInfo.textContent = '📥 укажите IP в поле или ?ip=';
+                qrInfo.textContent = '📥 Введите IP или передайте в ?ip=';
                 clearQR();
-                // Устанавливаем пример в поле ввода
-                ipInput.placeholder = 'например: 192.168.1.1';
             }
 
-            // Добавляем обработчики
-            generateBtn.addEventListener('click', handleGenerateClick);
-
-            // Обработка нажатия Enter в поле ввода
+            generateBtn.addEventListener('click', handleGenerate);
             ipInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    handleGenerateClick();
+                    handleGenerate();
                 }
             });
-
-            // Также можно сразу сгенерировать, если в поле что-то есть (при ручном вводе)
-            // Но оставим это по кнопке или Enter
         });
 
-        // Дополнительно: если параметр меняется динамически (для совместимости)
+        // Обновление при изменении URL (назад/вперед)
         window.addEventListener('popstate', function() {
             const ip = new URLSearchParams(window.location.search).get('ip');
             if (ip && ip.trim() !== '') {
