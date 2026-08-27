@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 QR Generator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -78,6 +77,10 @@
             width: 200px !important;
             height: 200px !important;
         }
+        /* Скрываем лишние canvas от библиотеки */
+        #qrcode canvas[style*="display: none"] {
+            display: none !important;
+        }
         .info {
             color: #7a8aa8;
             font-size: 13px;
@@ -138,7 +141,6 @@
             border: 1px solid #2a5a3a;
             margin-top: 10px;
         }
-        .hidden { display: none !important; }
         .qr-text {
             color: #63b3ed;
             font-size: 12px;
@@ -190,6 +192,8 @@
     </div>
 </div>
 
+<!-- Используем самую новую версию библиотеки -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     (function() {
         // DOM элементы
@@ -202,9 +206,7 @@
         const downloadPngBtn = document.getElementById('downloadPngBtn');
 
         let currentIP = '';
-        let currentQRInstance = null;
         let currentRawData = null;
-        let currentQRData = '';
 
         // Логирование
         function addLog(msg, type = 'info') {
@@ -222,9 +224,7 @@
         // Полное очищение QR
         function clearQR() {
             qrContainer.innerHTML = '';
-            currentQRInstance = null;
             currentRawData = null;
-            currentQRData = '';
             
             downloadRawBtn.style.opacity = '0.5';
             downloadRawBtn.style.pointerEvents = 'none';
@@ -278,7 +278,7 @@
             }
         }
 
-        // Генерация QR
+        // Генерация QR с использованием чистого canvas (без дублирования)
         function generateQR(ip) {
             clearQR();
             
@@ -290,71 +290,81 @@
             }
 
             const sanitized = ip.trim();
-            
-            // ФОРМИРУЕМ ПОЛНУЮ ССЫЛКУ С HTTP://
-            // Проверяем, не содержит ли уже http:// или https://
             let fullUrl = sanitized;
             if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
                 fullUrl = 'http://' + fullUrl;
             }
             
             currentIP = sanitized;
-            currentQRData = fullUrl;
-            
             ipDisplay.textContent = sanitized;
             qrText.textContent = `QR содержит: ${fullUrl}`;
             statusInfo.textContent = `✅ Генерация QR для ${fullUrl}`;
             addLog(`Генерация QR для: ${fullUrl}`, 'info-log');
 
             try {
-                // Генерируем QR с полной ссылкой
-                currentQRInstance = new QRCode(qrContainer, {
-                    text: fullUrl,  // <-- ЗДЕСЬ ПОДСТАВЛЯЕТСЯ HTTP://
-                    width: 200,
-                    height: 200,
-                    colorDark: '#000000',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-
-                setTimeout(() => {
-                    const canvas = qrContainer.querySelector('canvas');
-                    
-                    if (canvas) {
-                        const rawData = convertToRaw(canvas);
-                        
-                        if (rawData) {
-                            currentRawData = rawData;
-                            
-                            downloadPngBtn.style.opacity = '1';
-                            downloadPngBtn.style.pointerEvents = 'auto';
-                            const pngData = canvas.toDataURL('image/png');
-                            downloadPngBtn.href = pngData;
-                            downloadPngBtn.download = `qr_${sanitized}.png`;
-                            
-                            downloadRawBtn.style.opacity = '1';
-                            downloadRawBtn.style.pointerEvents = 'auto';
-                            const blob = new Blob([rawData], {
-                                type: 'application/octet-stream'
-                            });
-                            const url = URL.createObjectURL(blob);
-                            downloadRawBtn.href = url;
-                            downloadRawBtn.download = `qr_${sanitized}_128x64.raw`;
-                            
-                            statusInfo.textContent = `✅ QR готов для ${fullUrl}`;
-                            addLog(`✅ RAW сгенерирован: ${rawData.length} байт`, 'success');
-                            
-                            autoSendResponse();
-                            
-                        } else {
-                            addLog('❌ Ошибка конвертации в RAW', 'error');
-                            statusInfo.textContent = '❌ Ошибка конвертации';
+                // Ручное создание QR через canvas (без дублирования)
+                // Используем qrcode-generator напрямую
+                const qr = qrcode(0, 'M');
+                qr.addData(fullUrl);
+                qr.make();
+                
+                // Создаем canvas вручную
+                const canvas = document.createElement('canvas');
+                const size = 200;
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                // Белый фон
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, size, size);
+                
+                // Рисуем QR
+                const cells = qr.getModuleCount();
+                const cellSize = size / cells;
+                
+                for (let row = 0; row < cells; row++) {
+                    for (let col = 0; col < cells; col++) {
+                        if (qr.isDark(row, col)) {
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
                         }
-                    } else {
-                        addLog('❌ Canvas не найден', 'error');
-                        statusInfo.textContent = '❌ Ошибка рендеринга';
                     }
-                }, 300);
+                }
+                
+                // Добавляем canvas в контейнер
+                qrContainer.appendChild(canvas);
+                
+                // Конвертируем в RAW
+                const rawData = convertToRaw(canvas);
+                
+                if (rawData) {
+                    currentRawData = rawData;
+                    
+                    // Активируем кнопки
+                    downloadPngBtn.style.opacity = '1';
+                    downloadPngBtn.style.pointerEvents = 'auto';
+                    const pngData = canvas.toDataURL('image/png');
+                    downloadPngBtn.href = pngData;
+                    downloadPngBtn.download = `qr_${sanitized}.png`;
+                    
+                    downloadRawBtn.style.opacity = '1';
+                    downloadRawBtn.style.pointerEvents = 'auto';
+                    const blob = new Blob([rawData], {
+                        type: 'application/octet-stream'
+                    });
+                    const url = URL.createObjectURL(blob);
+                    downloadRawBtn.href = url;
+                    downloadRawBtn.download = `qr_${sanitized}_128x64.raw`;
+                    
+                    statusInfo.textContent = `✅ QR готов для ${fullUrl}`;
+                    addLog(`✅ RAW сгенерирован: ${rawData.length} байт`, 'success');
+                    
+                    autoSendResponse();
+                } else {
+                    addLog('❌ Ошибка конвертации в RAW', 'error');
+                    statusInfo.textContent = '❌ Ошибка конвертации';
+                }
                 
             } catch (e) {
                 console.error(e);
