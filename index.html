@@ -3,18 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Generator для ESP32</title>
-    <!-- Используем чистую библиотеку для генерации QR -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <title>ESP32 QR Generator</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f4f8;
+            font-family: 'Courier New', monospace;
+            background: #0a0e17;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -22,48 +16,58 @@
             padding: 20px;
         }
         .container {
-            background: white;
-            border-radius: 20px;
+            background: #141b2b;
+            border-radius: 16px;
             padding: 40px;
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border: 1px solid #2a3a5c;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
         }
         h1 {
-            color: #1a202c;
-            font-size: 24px;
-            margin-bottom: 8px;
+            color: #00d4ff;
+            font-size: 22px;
             text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(0,212,255,0.2);
         }
         .subtitle {
-            color: #4a5568;
+            color: #7a8aa8;
             text-align: center;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        .ip-display {
-            background: #edf2f7;
-            padding: 12px;
-            border-radius: 10px;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            font-weight: bold;
-            color: #2d3748;
+            font-size: 13px;
             margin-bottom: 25px;
-            word-break: break-all;
+            border-bottom: 1px solid #1f2d47;
+            padding-bottom: 15px;
         }
-        .qr-wrapper {
+        .status-box {
+            background: #0d1422;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #1f2d47;
+        }
+        .status-label {
+            color: #7a8aa8;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .status-value {
+            color: #00d4ff;
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 5px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+        }
+        .qr-container {
             display: flex;
             justify-content: center;
-            margin: 20px 0 25px;
-        }
-        #qrcode {
-            display: inline-block;
+            margin: 20px 0;
             background: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
         #qrcode canvas {
             display: block !important;
@@ -71,145 +75,101 @@
             height: 200px !important;
         }
         .info {
+            color: #7a8aa8;
+            font-size: 13px;
             text-align: center;
-            color: #4a5568;
-            font-size: 14px;
-            margin-bottom: 20px;
+            margin: 15px 0;
+            padding: 10px;
+            background: #0d1422;
+            border-radius: 8px;
+            border: 1px solid #1a2740;
+        }
+        .log {
+            background: #0a0e17;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 15px;
+            font-size: 12px;
+            color: #4a6a8a;
+            border: 1px solid #1a2740;
+            max-height: 120px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+        }
+        .log .success { color: #48bb78; }
+        .log .error { color: #fc8181; }
+        .log .info-log { color: #63b3ed; }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #1a2a4a;
+            color: #00d4ff;
+            text-decoration: none;
+            border-radius: 8px;
+            border: 1px solid #2a4a7a;
+            font-size: 13px;
+            transition: all 0.3s;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        .btn:hover {
+            background: #2a3a6a;
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0,212,255,0.1);
         }
         .btn-group {
             display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 10px;
-        }
-        .btn {
-            display: inline-block;
-            padding: 14px 24px;
-            background: #2b6cb0;
-            color: white;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            text-align: center;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-            font-size: 15px;
-        }
-        .btn:hover {
-            background: #2c5282;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.3);
-        }
-        .btn:active {
-            transform: translateY(0);
-        }
-        .btn-secondary {
-            background: #48bb78;
-        }
-        .btn-secondary:hover {
-            background: #38a169;
-            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
-        }
-        .btn-outline {
-            background: transparent;
-            color: #2d3748;
-            border: 2px solid #e2e8f0;
-        }
-        .btn-outline:hover {
-            background: #f7fafc;
-            box-shadow: none;
-            transform: none;
-        }
-        .input-group {
-            display: flex;
             gap: 10px;
-            margin: 20px 0 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
         }
-        .input-group input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
-            transition: 0.2s;
-        }
-        .input-group input:focus {
-            border-color: #2b6cb0;
-            box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.1);
-        }
-        .input-group button {
-            padding: 12px 24px;
-            background: #2b6cb0;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            white-space: nowrap;
-        }
-        .input-group button:hover {
-            background: #2c5282;
-        }
-        .error {
-            background: #fed7d7;
-            color: #9b2c2c;
-            padding: 10px 16px;
-            border-radius: 10px;
-            margin: 10px 0;
-            display: none;
-            font-size: 14px;
-        }
-        .badge {
+        .auto-download-badge {
             display: inline-block;
-            background: #ebf8ff;
-            color: #2b6cb0;
+            background: #1a3a2a;
+            color: #48bb78;
             padding: 4px 12px;
             border-radius: 20px;
-            font-size: 12px;
-            margin-top: 15px;
+            font-size: 11px;
+            border: 1px solid #2a5a3a;
+            margin-top: 10px;
         }
         @media (max-width: 480px) {
-            .container { padding: 24px 20px; }
+            .container { padding: 24px 16px; }
             #qrcode canvas { width: 160px !important; height: 160px !important; }
-            .input-group { flex-direction: column; }
-            .input-group button { width: 100%; }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="container">
-    <h1>📱 QR Generator</h1>
-    <p class="subtitle">для ESP32 дисплея 128×64</p>
+    <h1>⚡ ESP32 QR GENERATOR</h1>
+    <div class="subtitle">автоматический бинарный ответ для ESP32</div>
 
-    <div id="errorBox" class="error"></div>
+    <div class="status-box">
+        <div class="status-label">► Текущий IP</div>
+        <div class="status-value" id="ipDisplay">—</div>
+    </div>
 
-    <div class="ip-display" id="ipDisplay">—</div>
-
-    <div class="qr-wrapper">
+    <div class="qr-container">
         <div id="qrcode"></div>
     </div>
 
-    <div class="info" id="qrInfo">Введите IP-адрес или передайте через ?ip=</div>
+    <div class="info" id="statusInfo">
+        ⏳ Ожидание GET-запроса с ?ip=
+    </div>
+
+    <div class="log" id="logContainer">
+        <div class="info-log">[SYSTEM] Готов к приему запросов</div>
+    </div>
 
     <div class="btn-group">
-        <a href="#" id="downloadBtn" class="btn" style="opacity:0.5;pointer-events:none;">
-            ⬇ Скачать QR (PNG)
-        </a>
-        <a href="#" id="downloadBinaryBtn" class="btn btn-secondary" style="opacity:0.5;pointer-events:none;">
-            ⬇ Скачать как бинарный (RAW)
-        </a>
+        <a href="#" id="downloadRawBtn" class="btn">⬇ Скачать RAW (ESP32)</a>
+        <a href="#" id="downloadPngBtn" class="btn">⬇ Скачать PNG</a>
     </div>
 
-    <div class="input-group">
-        <input type="text" id="ipInput" placeholder="Введите IP, например 192.168.1.100">
-        <button id="generateBtn">Сгенерировать</button>
-    </div>
-
-    <div style="text-align:center;">
-        <span class="badge">⚡ GET-параметр: ?ip=192.168.1.100</span>
+    <div style="text-align: center; margin-top: 12px;">
+        <span class="auto-download-badge">✅ Автоответ: бинарный RAW</span>
     </div>
 </div>
 
@@ -218,117 +178,124 @@
         // DOM элементы
         const qrContainer = document.getElementById('qrcode');
         const ipDisplay = document.getElementById('ipDisplay');
-        const qrInfo = document.getElementById('qrInfo');
-        const errorBox = document.getElementById('errorBox');
-        const ipInput = document.getElementById('ipInput');
-        const generateBtn = document.getElementById('generateBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const downloadBinaryBtn = document.getElementById('downloadBinaryBtn');
+        const statusInfo = document.getElementById('statusInfo');
+        const logContainer = document.getElementById('logContainer');
+        const downloadRawBtn = document.getElementById('downloadRawBtn');
+        const downloadPngBtn = document.getElementById('downloadPngBtn');
 
         let currentIP = '';
         let currentCanvas = null;
+        let currentRawData = null;
 
-        // Показать ошибку
-        function showError(msg) {
-            errorBox.textContent = '⚠️ ' + msg;
-            errorBox.style.display = 'block';
-            setTimeout(() => { errorBox.style.display = 'none'; }, 5000);
+        // Логирование
+        function addLog(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            const time = new Date().toLocaleTimeString();
+            div.textContent = `[${time}] ${msg}`;
+            logContainer.appendChild(div);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            // Ограничиваем количество логов
+            while (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
         }
 
         // Очистка QR
         function clearQR() {
             qrContainer.innerHTML = '';
             currentCanvas = null;
-            downloadBtn.style.opacity = '0.5';
-            downloadBtn.style.pointerEvents = 'none';
-            downloadBtn.href = '#';
-            downloadBinaryBtn.style.opacity = '0.5';
-            downloadBinaryBtn.style.pointerEvents = 'none';
-            downloadBinaryBtn.href = '#';
+            currentRawData = null;
+            downloadRawBtn.style.opacity = '0.5';
+            downloadRawBtn.style.pointerEvents = 'none';
+            downloadRawBtn.href = '#';
+            downloadPngBtn.style.opacity = '0.5';
+            downloadPngBtn.style.pointerEvents = 'none';
+            downloadPngBtn.href = '#';
         }
 
-        // Генерация монохромного QR (белый фон, черный QR)
+        // Генерация QR
         function generateQR(ip) {
             clearQR();
 
             if (!ip || ip.trim() === '') {
-                showError('IP-адрес не указан');
                 ipDisplay.textContent = '—';
-                qrInfo.textContent = '❌ Введите IP';
+                statusInfo.textContent = '❌ IP не указан';
+                addLog('Ошибка: IP не указан', 'error');
                 return;
             }
 
             const sanitized = ip.trim();
             currentIP = sanitized;
             ipDisplay.textContent = sanitized;
-            qrInfo.textContent = `QR-код для ${sanitized}`;
+            statusInfo.textContent = `✅ QR сгенерирован для ${sanitized}`;
+            addLog(`QR-код сгенерирован для IP: ${sanitized}`, 'success');
 
             try {
-                // Генерируем QR с монохромными цветами
-                // Используем black/white для дисплея 128x64
+                // Генерируем монохромный QR
                 const qr = new QRCode(qrContainer, {
                     text: sanitized,
                     width: 200,
                     height: 200,
-                    colorDark: '#000000',    // черный
-                    colorLight: '#ffffff',   // белый
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
                     correctLevel: QRCode.CorrectLevel.H
                 });
 
-                // Находим canvas после рендера
                 setTimeout(() => {
                     const canvas = qrContainer.querySelector('canvas');
                     if (canvas) {
                         currentCanvas = canvas;
-                        // Активируем кнопки скачивания
-                        downloadBtn.style.opacity = '1';
-                        downloadBtn.style.pointerEvents = 'auto';
-                        downloadBinaryBtn.style.opacity = '1';
-                        downloadBinaryBtn.style.pointerEvents = 'auto';
 
-                        // Ссылка на PNG
+                        // Активируем кнопку PNG
+                        downloadPngBtn.style.opacity = '1';
+                        downloadPngBtn.style.pointerEvents = 'auto';
                         const pngData = canvas.toDataURL('image/png');
-                        downloadBtn.href = pngData;
-                        downloadBtn.download = `qr_${sanitized}.png`;
+                        downloadPngBtn.href = pngData;
+                        downloadPngBtn.download = `qr_${sanitized}.png`;
 
-                        // Генерация бинарного RAW для ESP32 (монохромный 128x64)
-                        generateBinaryQR(canvas);
+                        // Генерируем RAW для ESP32
+                        generateRawData(canvas, sanitized);
+
+                        // АВТОМАТИЧЕСКИЙ ОТВЕТ ДЛЯ ESP32
+                        // Если страница открыта с ?ip=, то автоматически отдаем RAW
+                        autoSendResponse();
+
                     } else {
-                        showError('Не удалось создать QR-код');
+                        addLog('Ошибка: canvas не найден', 'error');
                     }
-                }, 150);
+                }, 200);
 
             } catch (e) {
                 console.error(e);
-                showError('Ошибка генерации QR');
-                clearQR();
+                addLog(`Ошибка генерации QR: ${e.message}`, 'error');
+                statusInfo.textContent = '❌ Ошибка генерации';
             }
         }
 
-        // Функция для генерации бинарного RAW (монохромный 128x64)
-        function generateBinaryQR(canvas) {
+        // Генерация бинарного RAW для ESP32 (128x64 монохромный)
+        function generateRawData(canvas, ip) {
             try {
-                // Создаем временный canvas 128x64 для бинарного представления
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
                 const width = 128;
                 const height = 64;
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
                 tempCanvas.width = width;
                 tempCanvas.height = height;
 
-                // Рисуем QR на временном canvas с масштабированием
+                // Рисуем QR с масштабированием
                 tempCtx.drawImage(canvas, 0, 0, width, height);
 
-                // Получаем данные пикселей
+                // Получаем пиксели
                 const imageData = tempCtx.getImageData(0, 0, width, height);
                 const data = imageData.data;
 
                 // Создаем бинарный массив (1 бит на пиксель)
-                // Для ESP32 дисплея: 1 = черный (включен), 0 = белый (выключен)
+                // 1 = черный (включен), 0 = белый (выключен)
                 const binaryData = [];
                 for (let i = 0; i < data.length; i += 4) {
-                    // Берем красный канал (все каналы одинаковы для черно-белого)
-                    const pixel = data[i] < 128 ? 1 : 0; // черный = 1, белый = 0
+                    // Берем яркость (все каналы одинаковы для ЧБ)
+                    const pixel = data[i] < 128 ? 1 : 0;
                     binaryData.push(pixel);
                 }
 
@@ -344,78 +311,134 @@
                     byteArray.push(byte);
                 }
 
-                // Создаем Blob с бинарными данными
-                const blob = new Blob([new Uint8Array(byteArray)], {
+                currentRawData = new Uint8Array(byteArray);
+
+                // Активируем кнопку RAW
+                downloadRawBtn.style.opacity = '1';
+                downloadRawBtn.style.pointerEvents = 'auto';
+                const blob = new Blob([currentRawData], {
                     type: 'application/octet-stream'
                 });
-
-                // Создаем ссылку для скачивания
                 const url = URL.createObjectURL(blob);
-                downloadBinaryBtn.href = url;
-                downloadBinaryBtn.download = `qr_${currentIP}_128x64.raw`;
+                downloadRawBtn.href = url;
+                downloadRawBtn.download = `qr_${ip}_128x64.raw`;
+
+                addLog(`RAW-данные готовы: ${currentRawData.length} байт`, 'success');
 
             } catch (e) {
-                console.warn('Ошибка создания бинарного файла:', e);
-                downloadBinaryBtn.style.opacity = '0.5';
-                downloadBinaryBtn.style.pointerEvents = 'none';
+                console.warn('Ошибка генерации RAW:', e);
+                addLog(`Ошибка RAW: ${e.message}`, 'error');
             }
         }
 
-        // Получить IP из URL
-        function getIPFromURL() {
+        // АВТОМАТИЧЕСКАЯ ОТДАЧА RAW ДЛЯ ESP32
+        function autoSendResponse() {
+            // Проверяем, есть ли IP в URL
             const params = new URLSearchParams(window.location.search);
             const ip = params.get('ip');
-            if (ip && ip.trim() !== '') {
-                ipInput.value = ip.trim();
-                generateQR(ip.trim());
+
+            if (ip && currentRawData) {
+                addLog(`📡 Автоответ для ESP32: отправка RAW (${currentRawData.length} байт)`, 'info-log');
+
+                // Создаем ссылку для скачивания
+                const blob = new Blob([currentRawData], {
+                    type: 'application/octet-stream'
+                });
+                const url = URL.createObjectURL(blob);
+
+                // Создаем невидимую ссылку и кликаем для автоматической загрузки
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `qr_${ip}_128x64.raw`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+
+                // Задержка для уверенности, что все прогрузилось
+                setTimeout(() => {
+                    link.click();
+                    document.body.removeChild(link);
+                    addLog(`✅ RAW отправлен ESP32 (автозагрузка)`, 'success');
+                    statusInfo.textContent = `📤 RAW отправлен для ${ip}`;
+
+                    // Через 3 секунды освобождаем URL
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                    }, 3000);
+                }, 500);
+
                 return true;
             }
+
+            // Если IP есть, но RAW еще не готов — ждем
+            if (ip && !currentRawData) {
+                addLog(`⏳ Ожидание генерации RAW для ${ip}...`, 'info-log');
+                // Проверим через интервал
+                const checkInterval = setInterval(() => {
+                    if (currentRawData) {
+                        clearInterval(checkInterval);
+                        autoSendResponse();
+                    }
+                }, 200);
+
+                // Таймаут на 5 секунд
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    if (!currentRawData) {
+                        addLog('⚠️ Таймаут: RAW не сгенерирован', 'error');
+                    }
+                }, 5000);
+                return true;
+            }
+
             return false;
         }
 
-        // Обработчик кнопки "Сгенерировать"
-        function handleGenerate() {
-            const ip = ipInput.value.trim();
-            if (!ip) {
-                showError('Введите IP-адрес');
-                return;
+        // Получить IP из URL и сгенерировать
+        function processURL() {
+            const params = new URLSearchParams(window.location.search);
+            const ip = params.get('ip');
+
+            if (ip && ip.trim() !== '') {
+                addLog(`📥 Получен запрос с IP: ${ip}`, 'info-log');
+                ipDisplay.textContent = ip.trim();
+                generateQR(ip.trim());
+                return true;
             }
-            generateQR(ip);
-            // Обновляем URL
-            try {
-                const url = new URL(window.location);
-                url.searchParams.set('ip', ip);
-                window.history.replaceState({}, '', url);
-            } catch (e) {}
+
+            // Если IP не передан, показываем демо
+            addLog('ℹ️ Ожидается GET-запрос с ?ip=адрес', 'info-log');
+            statusInfo.textContent = '📡 Отправьте GET с ?ip=ваш_IP';
+            return false;
         }
 
         // Инициализация
         window.addEventListener('DOMContentLoaded', function() {
-            const hasIP = getIPFromURL();
-            if (!hasIP) {
-                ipDisplay.textContent = '—';
-                qrInfo.textContent = '📥 Введите IP или передайте в ?ip=';
-                clearQR();
-            }
+            // Добавляем обработчик для ручной генерации (для тестирования)
+            // Можно добавить через консоль: generateQR('192.168.1.100')
 
-            generateBtn.addEventListener('click', handleGenerate);
-            ipInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleGenerate();
-                }
+            // Обработка URL при загрузке
+            processURL();
+
+            // Следим за изменением URL (для навигации)
+            window.addEventListener('popstate', function() {
+                processURL();
             });
+
+            // Если страница загружена и в URL нет IP, но есть реферал - пробуем
+            // Это для случаев, когда ESP32 отправляет запрос
+            addLog('🔄 Система готова', 'info-log');
         });
 
-        // Обновление при изменении URL (назад/вперед)
-        window.addEventListener('popstate', function() {
-            const ip = new URLSearchParams(window.location.search).get('ip');
-            if (ip && ip.trim() !== '') {
-                ipInput.value = ip.trim();
-                generateQR(ip.trim());
-            }
-        });
+        // Экспортируем функции для тестирования из консоли
+        window.generateQR = generateQR;
+        window.testIP = function(ip) {
+            const url = new URL(window.location);
+            url.searchParams.set('ip', ip);
+            window.history.pushState({}, '', url);
+            processURL();
+        };
 
+        console.log('ℹ️ Для теста в консоли: testIP("192.168.1.100")');
     })();
 </script>
 </body>
